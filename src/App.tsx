@@ -1,51 +1,50 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+type Status = "idle" | "recording" | "processing";
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+export default function App() {
+    const [status, setStatus] = useState<Status>("idle");
 
-  return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    useEffect(() => {
+        const unlisten = listen<string>("recording-status", (event) => {
+            setStatus(event.payload as Status);
+        });
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+        return () => {
+            unlisten.then((fn) => fn());
+        };
+    }, []);
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
+    const statusConfig = {
+        idle: {
+            color: "#3b82f6",
+            label: "Prêt",
+            description: "Ctrl+Shift+Space pour enregistrer",
+        },
+        recording: {
+            color: "#ef4444",
+            label: "Enregistrement...",
+            description: "Ctrl+Shift+Space pour enregistrer",
+        },
+        processing: {
+            color: "#eab308",
+            label: "Transcription...",
+            description: "Veuillez patienter",
+        },
+    };
+
+    const current = statusConfig[status];
+
+    return (
+        <div className="container">
+            <div
+                className="status-indicator"
+                style={{ backgroundColor: current.color }}
+            />
+            <h1>{current.label}</h1>
+            <p>{current.description}</p>
+        </div>
+    );
 }
-
-export default App;
