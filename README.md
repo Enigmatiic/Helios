@@ -1,7 +1,11 @@
-# Tauri + React + Typescript
+# Helios Wispr
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+speech to text in any text field or input
 
-## Recommended IDE Setup
+## Stack
+- Tauri
+- React
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## programming Language
+- Rust
+- Typescript
