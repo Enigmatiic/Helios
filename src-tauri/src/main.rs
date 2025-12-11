@@ -18,6 +18,7 @@ fn main() {
     dotenv::dotenv().ok();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             // === SYSTEM TRAY ===
@@ -200,16 +201,20 @@ fn main() {
                                                         if clipboard.set_text(&text).is_ok() {
                                                             println!("📋 Copié !");
 
-                                                            // Petit delai pour laisser le presse-paier se mettre a jour
-                                                            std::thread::sleep(Duration::from_millis(100));
-
-                                                            // Simuler Ctrl+V pour coller
-                                                            if let Ok(mut enigo) = enigo::Enigo::new(&enigo::Settings::default()) {
-                                                                use enigo::{Direction, Key, Keyboard};
-                                                                let _ = enigo.key(Key::Control, Direction::Press);
-                                                                let _ = enigo.key(Key::Unicode('v'), Direction::Click);
-                                                                let _ = enigo.key(Key::Control, Direction::Release);
-                                                                println!("⌨️ Collé automatiquement !")
+                                                            if should_auto_paste() {
+                                                                // Petit delai pour laisser le presse-paier se mettre a jour
+                                                                std::thread::sleep(Duration::from_millis(100));
+    
+                                                                // Simuler Ctrl+V pour coller
+                                                                if let Ok(mut enigo) = enigo::Enigo::new(&enigo::Settings::default()) {
+                                                                    use enigo::{Direction, Key, Keyboard};
+                                                                    let _ = enigo.key(Key::Control, Direction::Press);
+                                                                    let _ = enigo.key(Key::Unicode('v'), Direction::Click);
+                                                                    let _ = enigo.key(Key::Control, Direction::Release);
+                                                                    println!("⌨️ Collé automatiquement !")
+                                                                }
+                                                            } else {
+                                                                println!("⚠️ Pas de fenêtre active, texte copié seulement")
                                                             }
                                                         }
                                                     }
@@ -292,4 +297,29 @@ async fn transcribe_audio(file_path: &str) -> Result<String, Box<dyn std::error:
     let text = json["text"].as_str().unwrap_or("").to_string();
 
     Ok(text)
+}
+
+#[cfg(windows)]
+fn should_auto_paste() -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
+
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.0 == std::ptr::null_mut() {
+            return false;
+        }
+
+        // Verifier que la fenetre a un titre (pas le bureau)
+        let mut title: [u16; 256] = [0; 256];
+        let len = GetWindowTextW(hwnd, &mut title);
+
+        // Si pas de titre ou titre vide, ne pas coller
+        len > 0
+    }
+}
+
+#[cfg(not(windows))]
+fn should_auto_paste() -> bool {
+    // Sur macOs/Linux, on colle toujours pour l'instant
+    true
 }
